@@ -20,4 +20,4 @@ All source code is Public Domain.
     
     Windows:
     
-        Make sure you have mingw installed and the location within you PATH variable then run mingw32-make.exe -f Makefile.w32.
+        Make sure you have mingw installed and the location within your PATH variable then run mingw32-make.exe -f Makefile.w32.
