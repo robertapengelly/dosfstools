@@ -922,7 +922,7 @@ int main (int argc, char **argv) {
             
                 if (j < 8 && de.name[j] == ' ') {
                 
-                    if ((de.attr & ATTR_DIR) != ATTR_DIR && j > 0 && filename[k - 1] != '.') {
+                    if ((de.attr & ATTR_DIR) != ATTR_DIR && k > 0 && filename[k - 1] != '.') {
                         filename[k++] = '.';
                     }
                 
