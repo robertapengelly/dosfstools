@@ -1,0 +1,53 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+SRCDIR              ?=  $(CURDIR)
+VPATH               :=  $(SRCDIR)
+
+CC                  :=  gcc
+CFLAGS              :=  -D_FILE_OFFSET_BITS=64 -Wall -Werror -Wextra -std=c90
+
+CSRC                :=  common.c report.c write7x.c
+
+ifeq ($(OS), Windows_NT)
+all: mkdosfs.exe mcopy.exe mmd.exe mls.exe
+
+mkdosfs.exe: lib.c mkfs.c $(CSRC)
+	$(CC) $(CFLAGS) -o $@ $^
+
+mcopy.exe: mcopy.c $(CSRC)
+	$(CC) $(CFLAGS) -o $@ $^
+
+mmd.exe: mmd.c $(CSRC)
+	$(CC) $(CFLAGS) -o $@ $^
+
+mls.exe: mls.c $(CSRC)
+	$(CC) $(CFLAGS) -o $@ $^
+else
+all: mkdosfs mcopy mmd mls
+
+mkdosfs: lib.c mkfs.c $(CSRC)
+	$(CC) $(CFLAGS) -o $@ $^
+
+mcopy: mcopy.c $(CSRC)
+	$(CC) $(CFLAGS) -o $@ $^
+
+mmd: mmd.c $(CSRC)
+	$(CC) $(CFLAGS) -o $@ $^
+
+mls: mls.c $(CSRC)
+	$(CC) $(CFLAGS) -o $@ $^
+endif
+
+clean:
+	if [ -f mkdosfs.exe ]; then rm -rf mkdosfs.exe; fi
+	if [ -f mkdosfs ]; then rm -rf mkdosfs; fi
+	
+	if [ -f mcopy.exe ]; then rm -rf mcopy.exe; fi
+	if [ -f mcopy ]; then rm -rf mcopy; fi
+	
+	if [ -f mmd.exe ]; then rm -rf mmd.exe; fi
+	if [ -f mmd ]; then rm -rf mmd; fi
+	
+	if [ -f mls.exe ]; then rm -rf mls.exe; fi
+	if [ -f mls ]; then rm -rf mls; fi

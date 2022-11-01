@@ -1,0 +1,37 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+SRCDIR              ?=  $(CURDIR)
+VPATH               :=  $(SRCDIR)
+
+CC                  :=  gcc
+CFLAGS              :=  -D_FILE_OFFSET_BITS=64 -Wall -Werror -Wextra -std=c90
+
+CSRC                :=  common.c report.c write7x.c
+
+all: mkdosfs.exe mcopy.exe mmd.exe mls.exe
+
+clean:
+	if exist mkdosfs.exe ( del /q mkdosfs.exe )
+	if exist mkdosfs ( del /q mkdosfs )
+	
+	if exist mcopy.exe ( del /q mcopy.exe )
+	if exist mcopy ( del /q mcopy )
+	
+	if exist mmd.exe ( del /q mmd.exe )
+	if exist mmd ( del /q mmd )
+	
+	if exist mls.exe ( del /q mls.exe )
+	if exist mls ( del /q mls )
+
+mkdosfs.exe: lib.c mkfs.c $(CSRC)
+	$(CC) $(CFLAGS) -o $@ $^
+
+mcopy.exe: mcopy.c $(CSRC)
+	$(CC) $(CFLAGS) -o $@ $^
+
+mmd.exe: mmd.c $(CSRC)
+	$(CC) $(CFLAGS) -o $@ $^
+
+mls.exe: mls.c $(CSRC)
+	$(CC) $(CFLAGS) -o $@ $^
