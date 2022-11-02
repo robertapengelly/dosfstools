@@ -93,7 +93,8 @@ enum options {
     OPTION_IGNORED = 1,
     OPTION_HELP,
     OPTION_INPUT,
-    OPTION_OFFSET
+    OPTION_OFFSET,
+    OPTION_STATUS
 
 };
 
@@ -103,6 +104,7 @@ static struct option opts[] = {
     
     { "-help",      OPTION_HELP,        OPTION_NO_ARG   },
     { "-offset",    OPTION_OFFSET,      OPTION_HAS_ARG  },
+    { "-status",    OPTION_STATUS,      OPTION_NO_ARG   },
     
     { 0,            0,                  0               }
 
@@ -329,6 +331,13 @@ static void parse_args (int *pargc, char ***pargv, int optind) {
                 }
                 
                 state->offset = (unsigned long) conversion;
+                break;
+            
+            }
+            
+            case OPTION_STATUS: {
+            
+                state->status = 1;
                 break;
             
             }
@@ -691,7 +700,7 @@ static int canonical_to_dir (char *dest, const char *src) {
 
 }
 
-static int copy_file (const char *source, struct file_info *fi) {
+static int copy_file (const char *source, struct file_info *fi, const char *fname) {
 
     struct msdos_dirent de;
     struct fat32_fsinfo *info;
@@ -708,7 +717,7 @@ static int copy_file (const char *source, struct file_info *fi) {
     unsigned int clust_size = sectors_per_cluster * 512;
     unsigned int start_cluster = 0, prev_cluster = 0, size = 0;
     
-    unsigned long flen;
+    unsigned long flen, copied = 0;
     
     if ((ifp = fopen (source, "rb")) == NULL) {
         return -1;
@@ -860,6 +869,19 @@ static int copy_file (const char *source, struct file_info *fi) {
                 free (buffer);
                 
                 return -1;
+            
+            }
+            
+            if (bytes > 512) {
+                copied += 512;
+            } else {
+                copied += bytes;
+            }
+            
+            if (state->status) {
+            
+                double percent = (double) copied / (double) flen;
+                printf ("\rcopied %lu bytes (%.2f%%) to %s", copied, percent * 100, fname);
             
             }
             
@@ -1715,10 +1737,12 @@ int get_file (const char *source, unsigned char *scratch, struct file_info *fi) 
 
 }
 
-int copy_from_image (const char *target, struct file_info *fi) {
+int copy_from_image (const char *target, struct file_info *fi, const char *fname) {
 
-    unsigned long sector, i;
+    unsigned long sector, i, copied = 0;
     FILE *tfp;
+    
+    unsigned long flen = (unsigned long) fi->bytes;
     
     if ((tfp = fopen (target, "rb")) == NULL) {
     
@@ -1771,6 +1795,15 @@ int copy_from_image (const char *target, struct file_info *fi) {
                     remove (target);
                     
                     return -1;
+                
+                }
+                
+                copied += 512;
+                
+                if (state->status) {
+                
+                    double percent = (double) copied / (double) flen;
+                    printf ("\rcopied %lu bytes (%.2f%%) to %s", copied, percent * 100, fname);
                 
                 }
                 
@@ -2108,7 +2141,11 @@ int main (int argc, char **argv) {
             
             }
             
-            if (copy_from_image (target, &fi) < 0) {
+            if (copy_from_image (target, &fi, tmppath) < 0) {
+                
+                if (state->status) {
+                    printf ("\n");
+                }
                 
                 report_at (program_name, 0, REPORT_ERROR, "failed to copy %s", source);
                 free (scratch);
@@ -2116,6 +2153,10 @@ int main (int argc, char **argv) {
                 fclose (ofp);
                 return EXIT_FAILURE;
             
+            }
+            
+            if (state->status) {
+                printf ("\n");
             }
             
             continue;
@@ -2134,14 +2175,22 @@ int main (int argc, char **argv) {
         
         fi.scratch = scratch;
         
-        if (copy_file (source, &fi) < 0) {
+        if (copy_file (source, &fi, tmppath) < 0) {
         
+            if (state->status) {
+                printf ("\n");
+            }
+            
             report_at (program_name, 0, REPORT_ERROR, "failed to copy %s", source);
             free (scratch);
             
             fclose (ofp);
             return EXIT_FAILURE;
         
+        }
+        
+        if (state->status) {
+            printf ("\n");
         }
     
     }

@@ -8,15 +8,6 @@
 #include    <stdlib.h>
 #include    <string.h>
 
-#ifndef     __PDOS__
-# if    defined (_WIN32)
-#  include  <windows.h>
-#  include  <winioctl.h>
-# elif defined (__GNUC__)
-#  include  <unistd.h>
-# endif
-#endif
-
 #include    "common.h"
 #include    "mmd.h"
 #include    "msdos.h"

@@ -11,6 +11,8 @@ struct mcopy_state {
     char **files;
     size_t nb_files;
     
+    int status;
+    
     const char *outfile;
     unsigned long offset;
 

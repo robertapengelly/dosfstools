@@ -1180,7 +1180,7 @@ int main (int argc, char **argv) {
     
     }
     
-    if (image_size < state->offset * 512) {
+    if (state->offset * 512 > image_size) {
     
         report_at (program_name, 0, REPORT_ERROR, "size (%lu) of %s is less than the requested offset (%lu)", image_size, state->outfile, state->offset * 512);
         

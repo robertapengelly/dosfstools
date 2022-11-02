@@ -8,19 +8,9 @@
 #include    <stdlib.h>
 #include    <string.h>
 
-#ifndef     __PDOS__
-# if    defined (_WIN32)
-#  include  <windows.h>
-#  include  <winioctl.h>
-# elif defined (__GNUC__)
-#  include  <unistd.h>
-# endif
-#endif
-
 #include    "common.h"
 #include    "msdos.h"
 #include    "report.h"
-#include    "write7x.h"
 
 #ifndef     PATH_MAX
 # define    PATH_MAX                    2048
@@ -688,6 +678,7 @@ int main (int argc, char **argv) {
     struct dir_info di;
     struct msdos_dirent de;
     
+    unsigned int bytes, timestamp;
     size_t i, j, k;
     
     if (argc && *argv) {
@@ -933,10 +924,40 @@ int main (int argc, char **argv) {
             }
             
             if (state->nb_dirs > 1) {
-                printf ("    %s\n", filename);
-            } else {
-                printf ("%s\n", filename);
+                printf ("    ");
             }
+            
+            printf ("%s", filename);
+            
+            while (k < 11) {
+            
+                printf (" ");
+                k++;
+            
+            }
+            
+            if ((de.attr & ATTR_DIR) == ATTR_DIR) {
+                printf ("    <DIR>    "); 
+            } else {
+                printf ("             ");
+            }
+            
+            if ((de.attr & ATTR_DIR) == ATTR_DIR) {
+                printf ("          ");
+            } else {
+            
+                bytes = (unsigned int) de.size[0] | (((unsigned int) de.size[1]) << 8) | (((unsigned int) de.size[2]) << 16) | (((unsigned int) de.size[3]) << 24);
+                printf ("%10u", bytes);
+            
+            }
+            
+            timestamp = (unsigned short) de.date[0] | (((unsigned short) de.date[1]) << 8);
+            printf ("    %04d-%02d-%02d", ((timestamp >> 9) & 0x3f) + 1980, (timestamp >> 5) & 0x0f, timestamp & 0x1f);
+            
+            timestamp = (unsigned short) de.time[0] | (((unsigned short) de.time[1]) << 8);
+            printf ("    %02d:%02d:%02d", (timestamp >> 11) & 0x3f, (timestamp >> 5) & 0x3f, (timestamp & 0x1f) << 1);
+            
+            printf ("\n");
         
         }
         

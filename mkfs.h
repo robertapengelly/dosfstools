@@ -12,7 +12,7 @@ struct mkfs_state {
     char label[12];
     
     int create, size_fat, size_fat_by_user, verbose;
-    unsigned long blocks, offset;
+    size_t blocks, offset;
 
 };
 

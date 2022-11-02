@@ -90,7 +90,7 @@ static void print_help (void) {
     fprintf (stderr, "\n");
     
     fprintf (stderr, "    Long options:\n\n");
-    fprintf (stderr, "        --blocks BLOCKS   Create file target then create the filesystem in it.\n");
+    fprintf (stderr, "        --blocks BLOCKS   Make the filesystem the size of BLOCKS * 1024.\n");
     fprintf (stderr, "        --boot FILE       Use FILE as the boot sector.\n");
     fprintf (stderr, "        --help            Show this help information then exit.\n");
     fprintf (stderr, "        --offset SECTOR   Write the filesystem starting at SECTOR.\n");
@@ -364,6 +364,8 @@ void parse_args (int *pargc, char ***pargv, int optind) {
                 
                 }
                 
+                memset (state->label, ' ', 11);
+                
                 for (n = 0; optarg[n] != '\0'; n++) {
                 
                     if (!is_label_char (optarg[n])) {
@@ -403,7 +405,7 @@ void parse_args (int *pargc, char ***pargv, int optind) {
                 
                 }
                 
-                state->offset = conversion;
+                state->offset = (size_t) conversion;
                 break;
             
             }
