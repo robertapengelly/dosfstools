@@ -26,7 +26,7 @@ struct mls_state {
 
 };
 
-static FILE *ofp;
+static FILE *ifp;
 
 struct dir_info {
 
@@ -124,7 +124,7 @@ static void print_help (int exitval) {
     
     fprintf (stderr, "    Long options:\n\n");
     fprintf (stderr, "        --help            Show this help information then exit.\n");
-    fprintf (stderr, "        --offset SECTOR   Write the filesystem starting at SECTOR.\n");
+    fprintf (stderr, "        --offset SECTOR   Read the filesystem starting at SECTOR.\n");
        
 _exit:
     
@@ -327,7 +327,7 @@ static void parse_args (int *pargc, char ***pargv, int optind) {
 
 
 static int seekto (long offset) {
-    return fseek (ofp, (state->offset * 512) + offset, SEEK_SET);
+    return fseek (ifp, (state->offset * 512) + offset, SEEK_SET);
 }
 
 static int get_next_entry (struct dir_info *di, struct msdos_dirent *de);
@@ -428,7 +428,7 @@ static int get_next_entry (struct dir_info *di, struct msdos_dirent *de) {
             
             offset = (unsigned long) root_dir + di->current_sector;
             
-            if (seekto (offset * 512) || fread (di->scratch, 512, 1, ofp) != 1) {
+            if (seekto (offset * 512) || fread (di->scratch, 512, 1, ifp) != 1) {
                 return -1;
             }
         
@@ -456,7 +456,7 @@ static int get_next_entry (struct dir_info *di, struct msdos_dirent *de) {
             offset += ((di->current_cluster - 2) * sectors_per_cluster);
             offset += di->current_sector;
             
-            if (seekto (offset * 512) || fread (di->scratch, 512, 1, ofp) != 1) {
+            if (seekto (offset * 512) || fread (di->scratch, 512, 1, ifp) != 1) {
                 return -1;
             }
         
@@ -514,7 +514,7 @@ static int open_dir (const char *target, struct dir_info *di) {
         
         }
         
-        if (seekto (offset * 512) || fread (di->scratch, 512, 1, ofp) != 1) {
+        if (seekto (offset * 512) || fread (di->scratch, 512, 1, ifp) != 1) {
             return -1;
         }
     
@@ -546,7 +546,7 @@ static int open_dir (const char *target, struct dir_info *di) {
         
         }
         
-        if (seekto (offset * 512) || fread (di->scratch, 512, 1, ofp) != 1) {
+        if (seekto (offset * 512) || fread (di->scratch, 512, 1, ifp) != 1) {
             return -1;
         }
         
@@ -585,7 +585,7 @@ static int open_dir (const char *target, struct dir_info *di) {
                     return -1;
                 }
                 
-                if (fread (di->scratch, 512, 1, ofp) != 1) {
+                if (fread (di->scratch, 512, 1, ifp) != 1) {
                     return -1;
                 }
             
@@ -629,7 +629,7 @@ static unsigned int get_fat_entry (unsigned char *scratch, unsigned int cluster)
     
     sector = (offset / 512) + reserved_sectors;
     
-    if (seekto ((unsigned long) sector * 512) || fread (scratch, 512, 1, ofp) != 1) {
+    if (seekto ((unsigned long) sector * 512) || fread (scratch, 512, 1, ifp) != 1) {
         return 0x0FFFFFF7;
     }
     
@@ -642,7 +642,7 @@ static unsigned int get_fat_entry (unsigned char *scratch, unsigned int cluster)
             result = (unsigned int) scratch[offset];
             sector++;
             
-            if (seekto ((unsigned long) sector * 512) || fread (scratch, 512, 1, ofp) != 1) {
+            if (seekto ((unsigned long) sector * 512) || fread (scratch, 512, 1, ifp) != 1) {
                 return 0x0FFFFFF7;
             }
             
@@ -703,17 +703,17 @@ int main (int argc, char **argv) {
         dynarray_add (&state->dirs, &state->nb_dirs, "/");
     }
     
-    if ((ofp = fopen (state->outfile, "rb")) == NULL) {
+    if ((ifp = fopen (state->outfile, "rb")) == NULL) {
     
         report_at (program_name, 0, REPORT_ERROR, "faild to open '%s' for reading", state->outfile);
         return EXIT_FAILURE;
     
     }
     
-    if (seekto ((unsigned long) 0) || fread (&bs, sizeof (bs), 1, ofp) != 1) {
+    if (seekto ((unsigned long) 0) || fread (&bs, sizeof (bs), 1, ifp) != 1) {
     
         report_at (program_name, 0, REPORT_ERROR, "failed whilst reading boot sector");
-        fclose (ofp);
+        fclose (ifp);
         
         return EXIT_FAILURE;
     
@@ -722,7 +722,7 @@ int main (int argc, char **argv) {
     if (bs.boot_jump[0] != 0xEB || bs.boot_jump[1] < 0x16 || bs.boot_jump[2] != 0x90) {
     
         report_at (program_name, 0, REPORT_ERROR, "%s does not have a valid FAT boot sector", state->outfile);
-        fclose (ofp);
+        fclose (ifp);
         
         return EXIT_FAILURE;
     
@@ -738,7 +738,7 @@ int main (int argc, char **argv) {
     if (!sectors_per_cluster || !reserved_sectors || !number_of_fats) {
     
         report_at (program_name, 0, REPORT_ERROR, "%s does not have a valid FAT boot sector", state->outfile);
-        fclose (ofp);
+        fclose (ifp);
         
         return EXIT_FAILURE;
     
@@ -749,7 +749,7 @@ int main (int argc, char **argv) {
         if (bs.boot_jump[1] < 0x58) {
         
             report_at (program_name, 0, REPORT_ERROR, "%s does not have a valid FAT boot sector", state->outfile);
-            fclose (ofp);
+            fclose (ifp);
             
             return EXIT_FAILURE;
         
@@ -760,7 +760,7 @@ int main (int argc, char **argv) {
         if (!root_cluster) {
         
             report_at (program_name, 0, REPORT_ERROR, "%s does not have a valid FAT boot sector", state->outfile);
-            fclose (ofp);
+            fclose (ifp);
             
             return EXIT_FAILURE;
         
@@ -773,7 +773,7 @@ int main (int argc, char **argv) {
         if (bs.boot_jump[1] < 0x22) {
         
             report_at (program_name, 0, REPORT_ERROR, "%s does not have a valid FAT boot sector", state->outfile);
-            fclose (ofp);
+            fclose (ifp);
             
             return EXIT_FAILURE;
         
@@ -784,7 +784,7 @@ int main (int argc, char **argv) {
         if (!total_sectors) {
         
             report_at (program_name, 0, REPORT_ERROR, "%s does not have a valid FAT boot sector", state->outfile);
-            fclose (ofp);
+            fclose (ifp);
             
             return EXIT_FAILURE;
         
@@ -797,7 +797,7 @@ int main (int argc, char **argv) {
         if (bs.boot_jump[1] < 0x58) {
         
             report_at (program_name, 0, REPORT_ERROR, "%s does not have a valid FAT boot sector", state->outfile);
-            fclose (ofp);
+            fclose (ifp);
             
             return EXIT_FAILURE;
         
@@ -808,7 +808,7 @@ int main (int argc, char **argv) {
         if (!sectors_per_fat) {
         
             report_at (program_name, 0, REPORT_ERROR, "%s does not have a valid FAT boot sector", state->outfile);
-            fclose (ofp);
+            fclose (ifp);
             
             return EXIT_FAILURE;
         
@@ -839,7 +839,7 @@ int main (int argc, char **argv) {
         if (!info_sector) {
         
             report_at (program_name, 0, REPORT_ERROR, "%s does not have a valid FAT boot sector", state->outfile);
-            fclose (ofp);
+            fclose (ifp);
             
             return EXIT_FAILURE;
         
@@ -854,7 +854,7 @@ int main (int argc, char **argv) {
     } else {
     
         report_at (program_name, 0, REPORT_ERROR, "FAT is not 12, 16 or 32 bits");
-        fclose (ofp);
+        fclose (ifp);
         
         return EXIT_FAILURE;
     
@@ -863,7 +863,7 @@ int main (int argc, char **argv) {
     if (!(scratch = (unsigned char *) malloc (512))) {
     
         report_at (program_name, 0, REPORT_ERROR, "Out of memory");
-        fclose (ofp);
+        fclose (ifp);
         
         return EXIT_FAILURE;
     
@@ -968,7 +968,7 @@ int main (int argc, char **argv) {
     }
     
     free (scratch);
-    fclose (ofp);
+    fclose (ifp);
     
     return EXIT_SUCCESS;
 

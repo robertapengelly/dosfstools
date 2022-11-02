@@ -212,7 +212,7 @@ void parse_args (int *pargc, char ***pargv, int optind) {
         print_help ();
     }
     
-    memcpy (state->label, "NO NAME    ", 11);
+    memcpy (state->label, "           ", 11);
     
     while (optind < argc) {
     
@@ -364,8 +364,6 @@ void parse_args (int *pargc, char ***pargv, int optind) {
                 
                 }
                 
-                memset (state->label, ' ', 11);
-                
                 for (n = 0; optarg[n] != '\0'; n++) {
                 
                     if (!is_label_char (optarg[n])) {
@@ -426,6 +424,10 @@ void parse_args (int *pargc, char ***pargv, int optind) {
         
         }
     
+    }
+    
+    if (memcmp (state->label, "           ", 11) == 0) {
+        memcpy (state->label, "NO NAME    ", 11);
     }
 
 }
