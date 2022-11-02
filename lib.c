@@ -212,7 +212,7 @@ void parse_args (int *pargc, char ***pargv, int optind) {
         print_help ();
     }
     
-    memcpy (state->label, "           ", 11);
+    memset (state->label, ' ', 11);
     
     while (optind < argc) {
     
