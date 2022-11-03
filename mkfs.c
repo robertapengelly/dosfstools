@@ -125,9 +125,20 @@ static int set_fat_entry (unsigned int cluster, unsigned int value) {
      */
     sector = (offset / 512) + reserved_sectors;
     
-    if (seekto (sector * 512) || fread (scratch, 512, 1, ofp) != 1) {
+    if (seekto (sector * 512)) {
     
         free (scratch);
+        
+        report_at (program_name, 0, REPORT_ERROR, "failed whilst seeking %s", state->outfile);
+        return -1;
+    
+    }
+    
+    if (fread (scratch, 512, 1, ofp) != 1) {
+    
+        free (scratch);
+        
+        report_at (program_name, 0, REPORT_ERROR, "failed whilst reading %s", state->outfile);
         return -1;
     
     }
@@ -1139,7 +1150,7 @@ int main (int argc, char **argv) {
         size_t len;
         void *zero;
         
-        if ((ofp = fopen (state->outfile, "wb")) == NULL) {
+        if ((ofp = fopen (state->outfile, "w+b")) == NULL) {
         
             report_at (program_name, 0, REPORT_ERROR, "failed to open '%s' for writing", state->outfile);
             return EXIT_FAILURE;
@@ -1167,7 +1178,6 @@ int main (int argc, char **argv) {
         
         }
         
-        seekto (0);
         free (zero);
     
     }
@@ -1176,9 +1186,10 @@ int main (int argc, char **argv) {
     
         fseek (ofp, 0, SEEK_END);
         image_size = ftell (ofp);
-        seekto (0);
     
     }
+    
+    seekto (0);
     
     if (state->offset * 512 > image_size) {
     
