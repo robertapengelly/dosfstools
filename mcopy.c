@@ -1492,7 +1492,7 @@ static int set_fat_entry (unsigned char *scratch, unsigned int cluster, unsigned
             if (((cluster * 3) & 0x01) == 0) {
                 scratch[offset] = (unsigned char) (value & 0xFF);
             } else {
-                scratch[offset] = (unsigned char) ((scratch[offset] & 0x0F) | (value & 0xF0));
+                scratch[offset] = (unsigned char) ((scratch[offset] & 0x0F) | ((value & 0x0F) << 4));
             }
             
             for (i = 0; i < number_of_fats; i++) {
