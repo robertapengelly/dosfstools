@@ -1507,14 +1507,14 @@ static int set_fat_entry (unsigned char *scratch, unsigned int cluster, unsigned
             
             sector++;
             
-            if (seekto (sector) || fread (scratch, 512, 1, ofp) != 1) {
+            if (seekto (sector * 512) || fread (scratch, 512, 1, ofp) != 1) {
                 return -1;
             }
             
             if (((cluster * 3) & 0x01) == 0) {
-                scratch[0] = (unsigned char) ((scratch[0] & 0xF0) | (value & 0x0F));
+                scratch[0] = (unsigned char) ((scratch[0] & 0xF0) | ((value & 0x0F00) >> 8));
             } else {
-                scratch[0] = (unsigned char) (value & 0xFF00);
+                scratch[0] = (unsigned char) ((value & 0x0FF0) >> 4);
             }
             
             goto _write_fat;
