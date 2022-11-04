@@ -33,6 +33,7 @@ enum options {
     OPTION_HELP,
     OPTION_NAME,
     OPTION_OFFSET,
+    OPTION_SECTORS,
     OPTION_VERBOSE
 
 };
@@ -41,6 +42,7 @@ static struct option opts[] = {
 
     { "F",          OPTION_FAT,         OPTION_HAS_ARG  },
     { "n",          OPTION_NAME,        OPTION_HAS_ARG  },
+    { "s",          OPTION_SECTORS,     OPTION_HAS_ARG  },
     { "v",          OPTION_VERBOSE,     OPTION_NO_ARG   },
     
     { "-boot",      OPTION_BOOT,        OPTION_HAS_ARG  },
@@ -404,6 +406,33 @@ void parse_args (int *pargc, char ***pargv, int optind) {
                 }
                 
                 state->offset = (size_t) conversion;
+                break;
+            
+            }
+            
+            case OPTION_SECTORS: {
+            
+                long conversion;
+                char *temp;
+                
+                errno = 0;
+                conversion = strtol (optarg, &temp, 0);
+                
+                if (!*optarg || isspace ((int) *optarg) || *temp || errno) {
+                
+                    report_at (program_name, 0, REPORT_ERROR, "bad number for sectors per cluster");
+                    exit (EXIT_FAILURE);
+                
+                }
+                
+                if (conversion != 1 && conversion != 2 && conversion != 4 && conversion != 8 && conversion != 16 && conversion != 32 && conversion != 64 && conversion != 128) {
+                
+                    report_at (program_name, 0, REPORT_ERROR, "bad number for sectors per cluster");
+                    exit (EXIT_FAILURE);
+                
+                }
+                
+                state->sectors_per_cluster = (unsigned char) conversion;
                 break;
             
             }

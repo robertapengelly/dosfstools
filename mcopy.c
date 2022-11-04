@@ -360,6 +360,8 @@ static void parse_args (int *pargc, char ***pargv, int optind) {
 /** Get a single character from the terminal. */
 static char getch () {
 
+    int key;
+    
 #if     defined(_WIN32) && !defined (__PDOS__)
 
     KEY_EVENT_RECORD keyevent;
@@ -436,6 +438,8 @@ static char getch () {
 #else
 
     struct termios term;
+    int nbbytes;
+    
     tcgetattr (0, &term);
     
     for (;;) {
@@ -443,7 +447,6 @@ static char getch () {
         term.c_lflag &= ~(ICANON | ECHO);                   /* turn off line buffering and echoing */
         tcsetattr (0, TCSANOW, &term);
         
-        int nbbytes;
         ioctl (0, FIONREAD, &nbbytes);                      /* 0 is STDIN */
         
         while (!nbbytes) {
@@ -457,7 +460,7 @@ static char getch () {
 
 #endif
         
-        int key = (int) getchar ();
+        key = (int) getchar ();
         
         if (key == 27 || key == 194 || key == 195) {        /* escape, 194/195 is escape for Â°ÃŸÂ´Ã¤Ã¶Ã¼Ã„Ã–Ãœ */
         
@@ -718,7 +721,7 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
     unsigned int start_cluster = 0, prev_cluster = 0, size = 0;
     
     unsigned long flen, copied = 0;
-    unsigned int num_clusters = 0, cluster_chain[cluster_count];
+    unsigned int num_clusters = 0, *cluster_chain;
     
     if ((ifp = fopen (source, "rb")) == NULL) {
         return -1;
@@ -733,23 +736,28 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
     
     }
     
+    if (!(cluster_chain = malloc (cluster_count * sizeof (unsigned int)))) {
+    
+        fclose (ifp);
+        return -1;
+    
+    }
+    
     num_clusters = (flen + clust_size -  1) / clust_size;
-    memset (cluster_chain, 0, sizeof (cluster_chain));
+    memset (cluster_chain, 0, cluster_count * sizeof (unsigned int));
     
     for (i = 2; i < cluster_count && j < num_clusters; i++) {
     
         if (get_fat_entry (fi->scratch, i) == 0) {
-        
-            cluster_chain[j] = i;
-            j++;
-        
+            cluster_chain[j++] = i;
         }
     
     }
     
     if (j < num_clusters) {
     
-        report_at (program_name, 0, REPORT_ERROR, "No enought free space avaialble");
+        report_at (program_name, 0, REPORT_ERROR, "Not enough free space available");
+        free (cluster_chain);
         
         fclose (ifp);
         return -1;
@@ -760,6 +768,8 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
     
     if (!(buffer = (unsigned char *) malloc (clust_size))) {
     
+        free (cluster_chain);
+        
         fclose (ifp);
         return -1;
     
@@ -775,9 +785,10 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
         
         if (i == cluster_count) {
         
-            fclose (ifp);
+            free (cluster_chain);
             free (buffer);
             
+            fclose (ifp);
             return -1;
         
         }
@@ -788,9 +799,10 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
             
             if (seekto ((unsigned long) fi->dir_sector * 512) || fread (fi->scratch, 512, 1, ofp) != 1) {
             
-                fclose (ifp);
+                free (cluster_chain);
                 free (buffer);
                 
+                fclose (ifp);
                 return -1;
             
             }
@@ -803,10 +815,11 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
             memcpy (&(((struct msdos_dirent *) fi->scratch)[fi->dir_offset]), &de, sizeof (de));
             
             if (seekto ((unsigned long) fi->dir_sector * 512) || fwrite (fi->scratch, 512, 1, ofp) != 1) {
-            
-                fclose (ifp);
+                
+                free (cluster_chain);
                 free (buffer);
                 
+                fclose (ifp);
                 return -1;
             
             }
@@ -814,19 +827,21 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
         } else {
         
             if (prev_cluster == 0) {
-            
-                fclose (ifp);
+                
+                free (cluster_chain);
                 free (buffer);
                 
+                fclose (ifp);
                 return -1;
             
             }
             
             if (set_fat_entry (fi->scratch, prev_cluster, i) < 0) {
-            
-                fclose (ifp);
+                
+                free (cluster_chain);
                 free (buffer);
                 
+                fclose (ifp);
                 return -1;
             
             }
@@ -837,9 +852,10 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
         
         if (seekto ((unsigned long) sector * 512)) {
         
-            fclose (ifp);
+            free (cluster_chain);
             free (buffer);
             
+            fclose (ifp);
             return -1;
         
         }
@@ -849,10 +865,11 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
         while (bytes > 0) {
         
             if (fwrite (temp, 512, 1, ofp) != 1) {
-            
-                fclose (ifp);
+                
+                free (cluster_chain);
                 free (buffer);
                 
+                fclose (ifp);
                 return -1;
             
             }
@@ -879,9 +896,10 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
         
         if (set_fat_entry (fi->scratch, i, 0x0FFFFFF8) < 0) {
         
-            fclose (ifp);
+            free (cluster_chain);
             free (buffer);
             
+            fclose (ifp);
             return -1;
         
         }
@@ -891,8 +909,10 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
     
     }
     
-    fclose (ifp);
+    free (cluster_chain);
     free (buffer);
+    
+    fclose (ifp);
     
     if (seekto ((unsigned long) fi->dir_sector * 512) || fread (fi->scratch, 512, 1, ofp) != 1) {
         return -1;
@@ -922,12 +942,7 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
     }
     
     if (seekto ((unsigned long) fi->dir_sector * 512) || fread (fi->scratch, 512, 1, ofp) != 1) {
-    
-        fclose (ifp);
-        free (buffer);
-        
         return -1;
-    
     }
     
     de = (((struct msdos_dirent *) fi->scratch)[fi->dir_offset]);

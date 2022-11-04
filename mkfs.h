@@ -13,6 +13,8 @@ struct mkfs_state {
     
     int create, size_fat, size_fat_by_user, verbose;
     size_t blocks, offset;
+    
+    unsigned char sectors_per_cluster;
 
 };
 

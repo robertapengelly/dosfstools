@@ -490,6 +490,10 @@ static void establish_bpb (void) {
     
     }
     
+    if (state->sectors_per_cluster) {
+        sectors_per_cluster = state->sectors_per_cluster;
+    }
+    
     hidden_sectors = state->offset;
     
     if (!reserved_sectors) {
