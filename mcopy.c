@@ -712,12 +712,13 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
     long bytes;
     
     unsigned char *buffer, *temp;
-    unsigned int i, sector;
+    unsigned int i, j, sector;
     
     unsigned int clust_size = sectors_per_cluster * 512;
     unsigned int start_cluster = 0, prev_cluster = 0, size = 0;
     
     unsigned long flen, copied = 0;
+    unsigned int num_clusters = 0, cluster_chain[cluster_count];
     
     if ((ifp = fopen (source, "rb")) == NULL) {
         return -1;
@@ -727,6 +728,29 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
     
     if ((flen = ftell (ifp)) > UINT_MAX) {
     
+        fclose (ifp);
+        return -1;
+    
+    }
+    
+    num_clusters = (flen + clust_size -  1) / clust_size;
+    memset (cluster_chain, 0, sizeof (cluster_chain));
+    
+    for (i = 2; i < cluster_count && j < num_clusters; i++) {
+    
+        if (get_fat_entry (fi->scratch, i) == 0) {
+        
+            cluster_chain[j] = i;
+            j++;
+        
+        }
+    
+    }
+    
+    if (j < num_clusters) {
+    
+        report_at (program_name, 0, REPORT_ERROR, "No enought free space avaialble");
+        
         fclose (ifp);
         return -1;
     
@@ -742,18 +766,12 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
     }
     
     memset (buffer, 0, clust_size);
+    j = 0;
     
     while ((bytes = fread (buffer, 1, clust_size, ifp)) > 0) {
     
         size += bytes;
-        
-        for (i = 2; i < cluster_count; i++) {
-        
-            if (get_fat_entry (fi->scratch, i) == 0) {
-                break;
-            }
-        
-        }
+        i = cluster_chain[j++];
         
         if (i == cluster_count) {
         
@@ -761,39 +779,6 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
             free (buffer);
             
             return -1;
-        
-        }
-        
-        if (size_fat == 32) {
-        
-            if (seekto ((unsigned long) info_sector * 512) || fread (fi->scratch, 512, 1, ofp) != 1) {
-            
-                fclose (ifp);
-                free (buffer);
-                
-                return -1;
-            
-            }
-            
-            info = (struct fat32_fsinfo *) (fi->scratch + 0x1e0);
-            
-            free_clusters = (unsigned int) info->free_clusters[0] | (((unsigned int) info->free_clusters[1]) << 8) | (((unsigned int) info->free_clusters[2]) << 16) | (((unsigned int) info->free_clusters[3]) << 24);
-            next_cluster = (unsigned int) info->next_cluster[0] | (((unsigned int) info->next_cluster[1]) << 8) | (((unsigned int) info->next_cluster[2]) << 16) | (((unsigned int) info->next_cluster[3]) << 24);
-            
-            free_clusters--;
-            next_cluster++;
-            
-            write741_to_byte_array (info->free_clusters, free_clusters);
-            write741_to_byte_array (info->next_cluster, next_cluster);
-            
-            if (seekto ((unsigned long) info_sector * 512) || fwrite (fi->scratch, 512, 1, ofp) != 1) {
-            
-                fclose (ifp);
-                free (buffer);
-                
-                return -1;
-            
-            }
         
         }
         
@@ -901,29 +886,6 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
         
         }
         
-        if (seekto ((unsigned long) fi->dir_sector * 512) || fread (fi->scratch, 512, 1, ofp) != 1) {
-        
-            fclose (ifp);
-            free (buffer);
-            
-            return -1;
-        
-        }
-        
-        de = (((struct msdos_dirent *) fi->scratch)[fi->dir_offset]);
-        
-        write741_to_byte_array (de.size, size);
-        memcpy (&(((struct msdos_dirent *) fi->scratch)[fi->dir_offset]), &de, sizeof (de));
-        
-        if (seekto ((unsigned long) fi->dir_sector * 512) || fwrite (fi->scratch, 512, 1, ofp) != 1) {
-        
-            fclose (ifp);
-            free (buffer);
-            
-            return -1;
-        
-        }
-        
         prev_cluster = i;
         if (feof (ifp)) { break; }
     
@@ -931,6 +893,51 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
     
     fclose (ifp);
     free (buffer);
+    
+    if (seekto ((unsigned long) fi->dir_sector * 512) || fread (fi->scratch, 512, 1, ofp) != 1) {
+        return -1;
+    }
+    
+    if (size_fat == 32) {
+    
+        if (seekto ((unsigned long) info_sector * 512) || fread (fi->scratch, 512, 1, ofp) != 1) {
+            return -1;
+        }
+        
+        info = (struct fat32_fsinfo *) (fi->scratch + 0x1e0);
+        
+        free_clusters = (unsigned int) info->free_clusters[0] | (((unsigned int) info->free_clusters[1]) << 8) | (((unsigned int) info->free_clusters[2]) << 16) | (((unsigned int) info->free_clusters[3]) << 24);
+        next_cluster = (unsigned int) info->next_cluster[0] | (((unsigned int) info->next_cluster[1]) << 8) | (((unsigned int) info->next_cluster[2]) << 16) | (((unsigned int) info->next_cluster[3]) << 24);
+        
+        free_clusters -= num_clusters;
+        next_cluster += num_clusters;
+        
+        write741_to_byte_array (info->free_clusters, free_clusters);
+        write741_to_byte_array (info->next_cluster, next_cluster);
+        
+        if (seekto ((unsigned long) info_sector * 512) || fwrite (fi->scratch, 512, 1, ofp) != 1) {
+            return -1;
+        }
+    
+    }
+    
+    if (seekto ((unsigned long) fi->dir_sector * 512) || fread (fi->scratch, 512, 1, ofp) != 1) {
+    
+        fclose (ifp);
+        free (buffer);
+        
+        return -1;
+    
+    }
+    
+    de = (((struct msdos_dirent *) fi->scratch)[fi->dir_offset]);
+    
+    write741_to_byte_array (de.size, size);
+    memcpy (&(((struct msdos_dirent *) fi->scratch)[fi->dir_offset]), &de, sizeof (de));
+    
+    if (seekto ((unsigned long) fi->dir_sector * 512) || fwrite (fi->scratch, 512, 1, ofp) != 1) {
+        return -1;
+    }
     
     return 0;
 
@@ -985,8 +992,6 @@ static int get_free_dirent (const char *path, struct dir_info *di, struct msdos_
                 }
             
             }
-            
-            i = 0;
             
             if (set_fat_entry (di->scratch, di->current_cluster, tempclust) < 0) {
                 return -1;

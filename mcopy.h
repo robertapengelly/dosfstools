@@ -14,7 +14,7 @@ struct mcopy_state {
     int status;
     
     const char *outfile;
-    unsigned long offset;
+    size_t offset;
 
 };
 
