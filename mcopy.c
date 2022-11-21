@@ -359,8 +359,6 @@ static void parse_args (int *pargc, char ***pargv, int optind) {
 #ifndef     __PDOS__
 /** Get a single character from the terminal. */
 static char getch () {
-
-    int key;
     
 #if     defined(_WIN32) && !defined (__PDOS__)
 
@@ -374,11 +372,11 @@ static char getch () {
         
         if (irec.EventType == KEY_EVENT && ((KEY_EVENT_RECORD) irec.Event.KeyEvent).bKeyDown) {
         
-            keyevent = (KEY_EVENT_RECORD) irec.Event.KeyEvent;
-            
             const int ca = (int) keyevent.uChar.AsciiChar;
             const int cv = (int) keyevent.wVirtualKeyCode;
             const int key = ca == 0 ? -cv : ca + (ca > 0 ? 0 : 256);
+            
+            keyevent = (KEY_EVENT_RECORD) irec.Event.KeyEvent;
             
             switch (key) {
             
@@ -429,6 +427,8 @@ static char getch () {
 
 #else
 
+    int key;
+    
 #if     defined (__PDOS__)
 
     setvbuf (stdin, NULL, _IONBF, 0);
