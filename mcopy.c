@@ -746,7 +746,7 @@ static int copy_file (const char *source, struct file_info *fi, const char *fnam
     num_clusters = (flen + clust_size -  1) / clust_size;
     memset (cluster_chain, 0, cluster_count * sizeof (unsigned int));
     
-    for (i = 2; i < cluster_count && j < num_clusters; i++) {
+    for (i = 2, j = 0; i < cluster_count && j < num_clusters; i++) {
     
         if (get_fat_entry (fi->scratch, i) == 0) {
             cluster_chain[j++] = i;
