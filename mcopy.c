@@ -585,7 +585,7 @@ static int check_overwrite (const char *fn) {
 
 #if     defined (__PDOS__)
 
-    report_at (NULL, 0, REPORT_WARNING, "ovewriting %s", fn);
+    report_at (NULL, 0, REPORT_WARNING, "overwriting %s", fn);
     return 1;
 
 #else
@@ -593,7 +593,7 @@ static int check_overwrite (const char *fn) {
     char ch;
     
     printf ("File %s already exists.\n", fn);
-    printf ("o)verrwrite s)skip (os): ");
+    printf ("o)verwrite s)skip (os): ");
     
     while ((ch = tolower (getch ())) < 0) {}
     
@@ -1352,11 +1352,11 @@ static int open_file (const char *target, unsigned char *scratch, struct file_in
             
             for (;;) {
             
-                if (size_fat == 12 && fi->cluster == 0x0FF8) {
+                if (size_fat == 12 && fi->cluster >= 0x0FF8) {
                     break;
-                } else if (size_fat == 16 && fi->cluster == 0xFFF8) {
+                } else if (size_fat == 16 && fi->cluster >= 0xFFF8) {
                     break;
-                } else if (size_fat == 32 && fi->cluster == 0x0FFFFFF8) {
+                } else if (size_fat == 32 && fi->cluster >= 0x0FFFFFF8) {
                     break;
                 }
                 
@@ -1652,13 +1652,11 @@ static unsigned int get_fat_entry (unsigned char *scratch, unsigned int cluster)
 
 static unsigned int get_free_fat (unsigned char *scratch) {
 
-    unsigned int i, result = 0xFFFFFFFF;
+    unsigned int i, result;
     
     for (i = 2; i < cluster_count; i++) {
     
-        result = get_fat_entry (scratch, i);
-        
-        if (!result) {
+        if (!(result = get_fat_entry (scratch, i))) {
             return i;
         }
     
@@ -1786,11 +1784,11 @@ int copy_from_image (const char *target, struct file_info *fi, const char *fname
     
     for (;;) {
     
-        if (size_fat == 12 && fi->cluster == 0x0FF8) {
+        if (size_fat == 12 && fi->cluster >= 0x0FF8) {
             break;
-        } else if (size_fat == 16 && fi->cluster == 0xFFF8) {
+        } else if (size_fat == 16 && fi->cluster >= 0xFFF8) {
             break;
-        } else if (size_fat == 32 && fi->cluster == 0x0FFFFFF8) {
+        } else if (size_fat == 32 && fi->cluster >= 0x0FFFFFF8) {
             break;
         }
         

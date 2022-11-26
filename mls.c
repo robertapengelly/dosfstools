@@ -673,7 +673,7 @@ static unsigned int get_fat_entry (unsigned char *scratch, unsigned int cluster)
 int main (int argc, char **argv) {
 
     unsigned char *scratch;
-    char *target, filename[12];
+    char *target, filename[13];
     
     struct dir_info di;
     struct msdos_dirent de;
@@ -907,7 +907,7 @@ int main (int argc, char **argv) {
                 continue;
             }
             
-            memset (filename, 0, 12);
+            memset (filename, 0, 13);
             
             for (j = 0, k = 0; j < 11; ++j) {
             
@@ -918,7 +918,13 @@ int main (int argc, char **argv) {
                     }
                 
                 } else {
+                
+                    if (j == 8 && (de.attr & ATTR_DIR) != ATTR_DIR && filename[k - 1] != '.') {
+                        filename[k++] = '.';
+                    }
+                    
                     filename[k++] = de.name[j];
+                
                 }
             
             }
@@ -929,7 +935,7 @@ int main (int argc, char **argv) {
             
             printf ("%s", filename);
             
-            while (k < 11) {
+            while (k < 12) {
             
                 printf (" ");
                 k++;
